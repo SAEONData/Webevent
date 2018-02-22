@@ -1,11 +1,7 @@
 // got this here: https://stackoverflow.com/questions/5180382/convert-json-data-to-a-html-table
 // Builds the HTML Table out of myList.
 
-const cheerio = require('cheerio')
-const $ = cheerio.load(`<body">
-<table id="excelDataTable" border="1">
-</table>
-</body>`)
+
 const fs = require('fs')
 const path = require('path')
 
