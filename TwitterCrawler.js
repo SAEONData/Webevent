@@ -8,12 +8,7 @@ const _ = require('lodash')
 
 class TwitterCrawler {
   constructor(opts) {
-    this.opts = opts || {
-      consumer_key:         'XeGMP15EanuJtsaTs9I4WTxEm',
-      consumer_secret:      'fQBkdFXTLfM3SBmN5SzmD3QGpPlWSXMun9x584uglLeFdvqThM',
-      access_token:         '547920673-hhnoC4zw85eUDhPKOFGRWt0qd0lldpizbW6WRbzx',
-      access_token_secret:  'Wb2kDRQgFUwFWTRJ1fWmf4mR1tuRXEEVtGj8YqFftRlop',
-    }
+    this.opts = opts
     Object.defineProperty(this, 'counter', { enumerable: false })
 
     const tracker = new EventTracker( opts )

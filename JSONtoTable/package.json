@@ -1,0 +1,15 @@
+{
+  "name": "jsontotable",
+  "version": "1.0.0",
+  "description": "",
+  "main": "GenerateTable.js",
+  "scripts": {
+    "start": "node GenerateTable",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "jsdom": "^11.6.2"
+  },
+  "author": "SAEON",
+  "license": "MIT"
+}
