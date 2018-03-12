@@ -9,15 +9,28 @@ const _ = require('lodash')
 class TwitterCrawler {
   constructor(opts) {
     this.opts = opts
-    Object.defineProperty(this, 'counter', { enumerable: false })
+    Object.defineProperty(this, 'counter', { enumerable: false, writable: true })
 
     const tracker = new EventTracker( opts )
     Object.defineProperty(this, 'tracker', { value: tracker })
 
+    this.basicTweetHandler = (action) => {
+      const { type, payload: { user: { name } , text, extended_tweet, place, timestamp } } = action
+      // Check for phase 2 kwords here
+      this.updateConsole(type, ++this.counter)
+      if(place) {
+        const { full_name } = place
+        const readableDate = new Date(timestamp)
+        return  { type, payload: { tweet: { name, timestamp, text, place: { full_name } } } } // we have location data
+      } else {
+        return { type, payload: { tweet: { name, timestamp, text } } } // no location data
+      }
+      return action
+    }
   }
 
   init(options) {
-    const { remoteKwords, boundingBoxes, localKwords } = options
+    const { remoteKwords, boundingBoxes, localKwords: { hazards, stocks} } = options
 
     if(remoteKwords.length > 400) {
       throw new Error(`remoteKwords too large (max: 400)`)
@@ -25,7 +38,8 @@ class TwitterCrawler {
 
     this.remoteKwords = remoteKwords
     this.boundingBoxes = boundingBoxes
-    this.localKwords = localKwords
+    this.hazards = hazards
+    this.stocks = stocks
 
     // Create an array of unique event listener keys
     const events = _.union(boundingBoxes.map(o => o.loc), remoteKwords)
@@ -37,13 +51,11 @@ class TwitterCrawler {
   }
 
   start() {
-    //tracker.trackLocation([18.279246,-34.219164,18.758525,-33.836752], "Cape Town") // Cape Town
-    //tracker.trackLocation([27.7886,-26.4141,28.2679,-26.0001], "Joburg") // Joburg
-    //tracker.trackLocation([30.667,-30.0335,31.1463,-29.6332], "Durban") // Durban
-    for(let v of locationKwords) {
-      tracker.addEventListener(v, basicTweetHandler)
-      tracker.trackKeyword(v)
+    for(let v of this.remoteKwords) {
+      this.tracker.addEventListener(v, this.basicTweetHandler)
+      this.tracker.trackKeyword(v)
     }
+
     //process.stdout.write(`Set up complete.\n`)
     //for(let i in locationsBoundingBoxs) {
     //  const { bb, loc } = locationsBoundingBoxs[i]
@@ -51,19 +63,7 @@ class TwitterCrawler {
     //}
   }
 
-  basicTweetHandler (action) {
-    const { type, payload: { user: { name } , text, extended_tweet, place, timestamp } } = action
-    // Check for phase 2 kwords here
-    updateConsole(type, ++this.counter)
-    if(place) {
-      const { full_name } = place
-      const readableDate = new Date(timestamp)
-      return  { type, payload: { tweet: { name, timestamp, text, place: { full_name } } } } // we have location data
-    } else {
-      return { type, payload: { tweet: { name, timestamp, text } } } // no location data
-    }
-    return action
-  }
+
 
   updateConsole(update, n) {
     process.stdout.clearLine()
@@ -73,12 +73,6 @@ class TwitterCrawler {
 
 }
 
-
-function updateConsole(update, n) {
-  process.stdout.clearLine()
-  process.stdout.cursorTo(0)
-  process.stdout.write(`Captured: ${n}, last from ${update}`)
-}
 
 module.exports = TwitterCrawler
 /*function main() {

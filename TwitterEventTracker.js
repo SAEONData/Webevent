@@ -8,7 +8,7 @@ const geoJsonBounds = require('geojson-bounds')
  * @see https://github.com/acdlite/flux-standard-action
  */
 class TwitterEventTracker {
-  constructor(opts, timeout) {
+  constructor(opts, timeout, endpoint) {
     timeout = timeout || 60 * 1000
     Object.assign(opts, { timeout_ms: timeout })
     const T = new Twit(opts)
@@ -16,7 +16,8 @@ class TwitterEventTracker {
     Object.defineProperty(this, 'T', { value: T }) // twit
     Object.defineProperty(this, 'registry', { value: {}, enumerable: true }) // event listener registry
     Object.defineProperty(this, 'history', { value: [], enumerable: true  }) // event listener history (this should be a database really)
-
+    Object.defineProperty(this, 'middleware', { value: [(x) => x], writable: true })
+    Object.defineProperty(this, 'endpoint', { value: (action) => console.log(action.payload.matches) || endpoint })
     Object.defineProperty(this, 'feed', {
       value: {
         dispatch: (action) => {
@@ -24,7 +25,8 @@ class TwitterEventTracker {
           if (typeof this.registry[type] == 'undefined') {
             console.error(`Event ${type} was fired but does not exist`)
           } else {
-            this.history.push(this.registry[type](action))
+            //this.history.push(this.registry[type](action))
+            const result = this.middleware.reduce((prev, curr) => curr(this.registry[type](action)), {})
           }
         }
       }

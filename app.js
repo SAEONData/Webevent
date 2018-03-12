@@ -15,6 +15,7 @@ class Application {
       .then(instance.preConfig)
       .then(instance.config)
       .then(instance.init)
+      .then(instance.start)
       .catch(error => {
         console.error(error)
         process.exit(1)
@@ -35,7 +36,7 @@ See https://developer.twitter.com/en/docs/basics/authentication/guides/access-to
           "access_token_secret":  ""
         },
         "remoteKwords": ["Twitter", "Javascript"],
-        "localKwords": ["Fun"],
+        "localKwords": { "hazards": ["fire"], "stocks": ["poverty"] },
         "boundingBoxes":  [
           { "bb": [18.279246,-34.219164,18.758525,-33.836752], "loc": "Cape Town"},
           { "bb": [27.7886,-26.4141,28.2679,-26.0001], "loc": "Joburg"},
@@ -63,7 +64,6 @@ See https://developer.twitter.com/en/docs/basics/authentication/guides/access-to
       console.error(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
       throw new Error("Invalid config.json")
     }
-
     Object.defineProperty(instance, 'opts', { value: opts })
     return instance
 
@@ -71,15 +71,20 @@ See https://developer.twitter.com/en/docs/basics/authentication/guides/access-to
 
   init(instance) {
     const { opts } = instance
-    const { api, remoteKwords, localKwords, boundingBoxes } = opts
+    const { api, remoteKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
 
     const tc = new TwitterCrawler(api)
     Object.defineProperty(instance, 'crawler', { value: tc })
 
-    tc.init({ remoteKwords, localKwords, boundingBoxes })
+    tc.init({ remoteKwords, localKwords: { hazards, stocks }, boundingBoxes })
     return instance
   }
 
+
+  start(instance) {
+    const { crawler } = instance
+    crawler.start()
+  }
 }
 
 Application.createApplication()
