@@ -1,15 +1,49 @@
 {
   "api": {
-    "consumer_key":         "XeGMP15EanuJtsaTs9I4WTxEm",
-    "consumer_secret":      "fQBkdFXTLfM3SBmN5SzmD3QGpPlWSXMun9x584uglLeFdvqThM",
-    "access_token":         "547920673-hhnoC4zw85eUDhPKOFGRWt0qd0lldpizbW6WRbzx",
-    "access_token_secret":  "Wb2kDRQgFUwFWTRJ1fWmf4mR1tuRXEEVtGj8YqFftRlop"
+    "consumer_key": "",
+    "consumer_secret": "",
+    "access_token": "",
+    "access_token_secret": ""
   },
-  "remoteKwords": [],
-  "localKwords": { "hazards" : [ "fire"], "stocks": [ "something"] },
-  "boundingBoxes":  [
-    { "bb": [18.279246,-34.219164,18.758525,-33.836752], "loc": "Cape Town"},
-    { "bb": [27.7886,-26.4141,28.2679,-26.0001], "loc": "Joburg"},
-    { "bb": [30.667,-30.0335,31.1463,-29.6332], "loc": "Durban"}
+  "remoteKwords": [
+    "Twitter",
+    "Javascript"
+  ],
+  "localKwords": {
+    "hazards": [
+      "fire"
+    ],
+    "stocks": [
+      "poverty"
+    ]
+  },
+  "boundingBoxes": [
+    {
+      "bb": [
+        18.279246,
+        -34.219164,
+        18.758525,
+        -33.836752
+      ],
+      "loc": "Cape Town"
+    },
+    {
+      "bb": [
+        27.7886,
+        -26.4141,
+        28.2679,
+        -26.0001
+      ],
+      "loc": "Joburg"
+    },
+    {
+      "bb": [
+        30.667,
+        -30.0335,
+        31.1463,
+        -29.6332
+      ],
+      "loc": "Durban"
+    }
   ]
 }

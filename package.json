@@ -1,22 +1,23 @@
 {
-  "name": "twittercrawler",
+  "name": "hookablewebevent",
   "version": "1.0.0",
-  "description": "",
+  "description": "Webevent 2",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon app.js",
+    "start": "node app.js | bunyan",
+    "dev": "nodemon app.js | bunyan",
+    "debug": "node --nolazy --inspect-brk=9229 app.js | bunyan",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "author": "SAEON (St John Giddy)",
+  "license": "MIT",
+  "devDependencies": {
+    "nodemon": "^1.17.2"
+  },
   "dependencies": {
-    "fuse.js": "^3.2.0",
-    "geojson-bounds": "^1.0.1",
-    "jsdom": "^11.6.2",
+    "bunyan": "^1.8.12",
+    "express": "^4.16.3",
     "lodash": "^4.17.5",
     "twit": "^2.2.9"
-  },
-  "devDependencies": {
-    "nodemon": "^1.14.12"
-  },
-  "author": "St John Giddy (SAEON)",
-  "license": "MIT"
+  }
 }

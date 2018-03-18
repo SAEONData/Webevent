@@ -1,105 +1,179 @@
-'ust strict'
-const TwitterCrawler = require('./TwitterCrawler')
+'use strict'
+
+/**
+ * imports
+ * @ignore
+ */
 const fs = require('fs')
 const path = require('path')
 const _ = require('lodash')
+const express = require('express')
+
+/**
+ * Module imports
+ */
+const LoggerFactory = require('./src/Logger.js')
+const { TweetTracker } = require('./src/twitter')
 
 class Application {
   constructor() {
     this.configFile = 'config.json'
+    this.configDir = 'config'
   }
 
   static createApplication() {
-    let instance = new Application
+    const instance = new Application
     return Promise.resolve(instance)
-      .then(instance.preConfig)
-      .then(instance.config)
-      .then(instance.init)
-      .then(instance.start)
-      .catch(error => {
-        console.error(error)
+      .then(instance.logger)
+      .catch((e) => () => {
+        console.error('ERROR: An error was thrown before or during the logger initialization. Fallback to console.error(). Please investigate immediately.')
         process.exit(1)
       })
+      .then(instance.preConfig)
+      .then(instance.config)
+      .then(instance.twitter)
+      .then(instance.express)
+      .then(instance.exithandler)
+      .catch((e) => {
+        instance.logger.fatal(e, 'Error during start up.')
+        process.exit(1)
+      })
+      .then(instance.listen)
+      .catch(e => instance.logger.error(e, 'Uncaught expection during application runtime'))
   }
 
-  async preConfig(instance) {
-    if (!fs.existsSync(instance.configFile)) {
-      console.log(`${instance.configFile} doesn't exist. Creating templete ${instance.configFile}.
-Please populate it with correct values.
-See https://developer.twitter.com/en/docs/basics/authentication/guides/access-tokens to generate your API keys`)
+  /**
+   * logger
+   * Set up the logger
+   * @ignore
+   */
+  logger(instance) {
+    const dir = 'logs'
+    const errorFile = 'error.log'
 
-      fs.writeFileSync(path.join(__dirname, instance.configFile), JSON.stringify({
+    if (!fs.existsSync(path.join(__dirname, dir))){
+      fs.mkdirSync(path.join(__dirname, dir));
+    }
+
+    const logger = LoggerFactory.createLogger()
+    Object.defineProperty(instance, 'logger', { value: logger })
+    return instance
+  }
+
+  /**
+   * preConfig
+   * Config file sanity check
+   * @ignore
+   */
+  preConfig(instance) {
+    const configPath = path.join(__dirname, instance.configDir, instance.configFile)
+    if (!fs.existsSync(configPath)) {
+      instance.logger.fatal(`${instance.configFile} doesn't exist. Creating templete ${instance.configFile}.\nPlease populate it with correct values.\nSee https://developer.twitter.com/en/docs/basics/authentication/guides/access-tokens to generate your API keys`)
+
+      // default keys with example values
+      fs.writeFileSync(configPath, JSON.stringify({
         "api": {
-          "consumer_key":         "",
-          "consumer_secret":      "",
-          "access_token":         "",
-          "access_token_secret":  ""
+          "consumer_key": "",
+          "consumer_secret": "",
+          "access_token": "",
+          "access_token_secret": ""
         },
-        "remoteKwords": ["Twitter", "Javascript"],
+        "locationKwords": ["Cape Town", "Durban"],
         "localKwords": { "hazards": ["fire"], "stocks": ["poverty"] },
-        "boundingBoxes":  [
-          { "bb": [18.279246,-34.219164,18.758525,-33.836752], "loc": "Cape Town"},
-          { "bb": [27.7886,-26.4141,28.2679,-26.0001], "loc": "Joburg"},
-          { "bb": [30.667,-30.0335,31.1463,-29.6332], "loc": "Durban"}
+        "boundingBoxes": [
+          { "bb": [18.279246, -34.219164, 18.758525, -33.836752], "loc": "Cape Town" },
+          { "bb": [27.7886, -26.4141, 28.2679, -26.0001], "loc": "Joburg" },
+          { "bb": [30.667, -30.0335, 31.1463, -29.6332], "loc": "Durban" }
         ]
       }, null, 2))
+
       process.exit(1)
     }
+
     return instance
   }
 
+  /**
+   * config
+   * Load in values from the config file
+   * @ignore
+   */
   config(instance) {
-    const opts = JSON.parse(fs.readFileSync(path.join(__dirname, instance.configFile)))
+    const opts = JSON.parse(fs.readFileSync(path.join(__dirname, instance.configDir, instance.configFile)))
     const { api } = opts
 
+
     if (!api) {
-      console.error("Twitter API tokens should be set in config.json")
+      instance.logger.fatal("Twitter API tokens should be set in config.json")
       throw new Error("Invalid config.json")
     }
 
+    // Ensure all the API tokens are there
     const expectedArgs = ["consumer_key", "consumer_secret", "access_token", "access_token_secret"]
-    const missingArgs = expectedArgs.filter(e => !_.keys(api).find(a => e == a)); // diff of expectedArgs and provided args
+    const missingArgs = expectedArgs.filter(e => !_.keys(api).find(a => e == a))
 
+    // Let the user know what keys are missing
     if (!_.isEmpty(missingArgs)) {
-      console.error(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
+      instance.logger.fatal(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
       throw new Error("Invalid config.json")
     }
+
     Object.defineProperty(instance, 'opts', { value: opts })
     return instance
-
   }
 
-  init(instance) {
+
+  twitter(instance) {
     const { opts } = instance
-    const { api, remoteKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
+    const { api, locationKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
+    instance.tweets = []
+    const tracker = new TweetTracker(api, instance.logger,  (tweet) => instance.tweets.push(tweet))
+    Object.defineProperty(instance, 'tracker', { value: tracker })
+    tracker.init({ locationKwords, localKwords: { hazards, stocks }, boundingBoxes })
 
-    const tc = new TwitterCrawler(api)
-    Object.defineProperty(instance, 'crawler', { value: tc })
-
-    tc.init({ remoteKwords, localKwords: { hazards, stocks }, boundingBoxes })
+    tracker.start()
     return instance
   }
 
+  express(instance) {
+    const app = express()
+    const locations = instance.opts.locationKwords
+    app.get('/locations', (req, res) => {
+      res.send({ locationKwords: locations })
+    })
 
-  start(instance) {
-    const { crawler } = instance
-    crawler.start()
+    app.get('/tweets', (req, res) => {
+      res.send({ tweets: instance.tweets })
+    })
+    Object.defineProperty(instance, 'app', { value: app })
+    return instance
+  }
+
+  exithandler(instance) {
+    const handle = (options, err) => {
+      const { exit } = options
+
+      if(err) {
+        if(instance.logger) instance.logger.fatal(err, 'Application crash')
+        else console.error('FATAL: Application crash', err)
+      }
+      if(instance.logger) {
+        instance.logger.info('Application shutdown')
+      }
+      if(exit) process.exit(0)
+    }
+
+    //process.on('exit', handle.bind(null, { exit: true }))
+
+    return instance
+  }
+
+  listen(instance) {
+    // TODO: load port number from config.json
+    module.exports = instance
+    instance.logger.info(`Application initialization completed. Listening on port ${3000}`)
+    instance.app.listen(3000)
   }
 }
 
 Application.createApplication()
-
-//function exitHandler(options, err) {
-//  const { history } = tracker
-//  if(options.cleanup) {
-//    console.log(`\nDumping ${history.length} entries history.json`)
-//    fs.writeFileSync( path.join(__dirname, `JSONtoTable/history.json`), JSON.stringify( { history } ).trimLeft())
-//  }
-//  if (err) console.log(err.stack);
-//  if (options.exit) process.exit();
-//}
-//
-//process.on('exit', exitHandler.bind(null,{cleanup:true}));
-//process.on('SIGINT', exitHandler.bind(null, {exit:true}));
-//process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));
-//process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
