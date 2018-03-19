@@ -27,23 +27,27 @@ class Application {
 
   static createApplication() {
     const instance = new Application
+
+    // bind functions to application context
+    const $ = (func) => func.bind(instance)
+
     return Promise.resolve(instance)
-      .then(instance.logger)
+      .then($(instance.logger))
       .catch((e) => () => {
         console.error('ERROR: An error was thrown before or during the logger initialization. Fallback to console.error(). Please investigate immediately.')
         process.exit(1)
       })
-      .then(instance.arguments)
-      .then(instance.preConfig)
-      .then(instance.config)
-      .then(instance.twitter)
-      .then(instance.express)
-      .then(instance.exithandler)
+      .then($(instance.arguments))
+      .then($(instance.preConfig))
+      .then($(instance.config))
+      .then($(instance.twitter))
+      .then($(instance.express))
+      .then($(instance.exithandler))
       .catch((e) => {
         instance.logger.fatal(e, 'Error during start up.')
         process.exit(1)
       })
-      .then(instance.listen)
+      .then($(instance.listen))
       .catch(e => instance.logger.error(e, 'Uncaught expection during application runtime'))
   }
 
@@ -52,7 +56,7 @@ class Application {
    * Set up the logger
    * @ignore
    */
-  logger(instance) {
+  logger() {
     const dir = 'logs'
     const errorFile = 'error.log'
 
@@ -61,8 +65,7 @@ class Application {
     }
 
     const logger = LoggerFactory.createLogger()
-    Object.defineProperty(instance, 'logger', { value: logger })
-    return instance
+    Object.defineProperty(this, 'logger', { value: logger })
   }
 
   /**
@@ -70,19 +73,17 @@ class Application {
    * @description Parse arguments supplied from the CLI
    * --config <path> Path for config file
    * --port <port> Port to listen on
-   * @param {*} instance
    */
-  arguments(instance) {
+  arguments() {
     const args = parseArgs(process.argv.slice(2))
     if (args.config) {
-      instance.configPath = args.config
-      instance.logger.info(`Using config file: ${instance.configPath}`)
+      this.configPath = args.config
+      this.logger.info(`Using config file: ${this.configPath}`)
     }
 
     if (args.port) {
-      instance.port = args.port
+      this.port = args.port
     }
-    return instance
   }
 
   /**
@@ -90,12 +91,12 @@ class Application {
    * Config file sanity check
    * @ignore
    */
-  preConfig(instance) {
-    if (!fs.existsSync(instance.configPath)) {
-      instance.logger.fatal(`${instance.configPath} doesn't exist. Creating templete ${instance.configPath}.\nPlease populate it with correct values.\nSee https://developer.twitter.com/en/docs/basics/authentication/guides/access-tokens to generate your API keys`)
+  preConfig() {
+    if (!fs.existsSync(this.configPath)) {
+      this.logger.fatal(`${this.configPath} doesn't exist. Creating templete ${this.configPath}.\nPlease populate it with correct values.\nSee https://developer.twitter.com/en/docs/basics/authentication/guides/access-tokens to generate your API keys`)
 
       // default keys with example values
-      fs.writeFileSync(instance.configPath, JSON.stringify({
+      fs.writeFileSync(this.configPath, JSON.stringify({
         "locationKwords": ["Cape Town", "Durban"],
         "localKwords": { "hazards": ["fire"], "stocks": ["poverty"] },
         "boundingBoxes": [
@@ -108,8 +109,8 @@ class Application {
       process.exit(1)
     }
 
-    if (!fs.existsSync(instance.secretPath)) {
-      fs.writeFileSync(instance.secretPath, JSON.stringify({
+    if (!fs.existsSync(this.secretPath)) {
+      fs.writeFileSync(this.secretPath, JSON.stringify({
         "consumer_key": "",
         "consumer_secret": "",
         "access_token": "",
@@ -119,7 +120,6 @@ class Application {
       process.exit(1)
     }
 
-    return instance
   }
 
   /**
@@ -127,13 +127,13 @@ class Application {
    * @description Load in values from the config file
    * @ignore
    */
-  config(instance) {
-    const opts = JSON.parse(fs.readFileSync(instance.configPath))
-    const secret = JSON.parse(fs.readFileSync(instance.secretPath))
+  config() {
+    const opts = JSON.parse(fs.readFileSync(this.configPath))
+    const secret = JSON.parse(fs.readFileSync(this.secretPath))
 
 
     if (!secret) {
-      instance.logger.fatal("Twitter API tokens should be set in config.json")
+      this.logger.fatal("Twitter API tokens should be set in config.json")
       throw new Error("Invalid config.json")
     }
 
@@ -143,31 +143,28 @@ class Application {
 
     // Let the user know what keys are missing
     if (!_.isEmpty(missingArgs)) {
-      instance.logger.fatal(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
+      this.logger.fatal(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
       throw new Error("Invalid config.json")
     }
 
-    Object.defineProperty(instance, 'opts', { value: opts })
-    Object.defineProperty(instance, 'apiSecret', { value: secret })
-    return instance
+    Object.defineProperty(this, 'opts', { value: opts })
+    Object.defineProperty(this, 'apiSecret', { value: secret })
   }
 
   /**
    * @description Set up the realtime tweet tracker
-   * @param {*} instance instance of the application
    */
-  twitter(instance) {
-    const { opts, apiSecret } = instance
+  twitter() {
+    const { opts, apiSecret } = this
     const { locationKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
-    instance.tweets = []
+    this.tweets = []
 
-    const tracker = new TweetTracker(apiSecret, instance.logger, (tweet) => instance.tweets.push(tweet))
+    const tracker = new TweetTracker(apiSecret, this.logger, (tweet) => this.tweets.push(tweet))
 
-    Object.defineProperty(instance, 'tracker', { value: tracker })
+    Object.defineProperty(this, 'tracker', { value: tracker })
     tracker.init({ locationKwords, localKwords: { hazards, stocks }, boundingBoxes })
 
     tracker.start()
-    return instance
   }
 
   /**
@@ -175,51 +172,49 @@ class Application {
    * @description Configure the express app
    * @param {*} instance
    */
-  express(instance) {
+  express() {
     const app = express()
-    const locations = instance.opts.locationKwords
+    const locations = this.opts.locationKwords
     app.get('/locations', (req, res) => {
       res.send({ locationKwords: locations })
     })
 
     app.get('/tweets', (req, res) => {
-      res.send({ tweets: instance.tweets })
+      res.send({ tweets: this.tweets })
     })
 
     app.get('/streams', (req, res) => {
-      const streams = instance.tracker.twitter.streams
+      const streams = this.tracker.twitter.streams
       const readableStreams = streams.map(stream => stream.reqOpts.url)
       res.send({ streams: readableStreams })
     })
 
-    Object.defineProperty(instance, 'app', { value: app })
-    return instance
+    Object.defineProperty(this, 'app', { value: app })
   }
 
-  exithandler(instance) {
+  exithandler() {
     const handle = (options, err) => {
       const { exit } = options
 
       if (err) {
-        if (instance.logger) instance.logger.fatal(err, 'Application crash')
+        if (this.logger) this.logger.fatal(err, 'Application crash')
         else console.error('FATAL: Application crash', err)
       }
-      if (instance.logger) {
-        instance.logger.info('Application shutdown')
+      if (this.logger) {
+        this.logger.info('Application shutdown')
       }
       if (exit) process.exit(0)
     }
 
     //process.on('exit', handle.bind(null, { exit: true }))
 
-    return instance
   }
 
-  listen(instance) {
+  listen() {
     // TODO: load port number from config.json
-    module.exports = instance
-    instance.logger.info(`Application initialization completed. Listening on port ${instance.port}`)
-    instance.app.listen(instance.port)
+    module.exports = this
+    this.logger.info(`Application initialization completed. Listening on port ${this.port}`)
+    this.app.listen(this.port)
   }
 }
 
