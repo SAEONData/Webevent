@@ -32,7 +32,7 @@ class Application {
     const $ = (func) => func.bind(instance)
 
     return Promise.resolve(instance)
-      .then($(instance.logger))
+      .then($(instance.log))
       .catch((e) => () => {
         console.error('ERROR: An error was thrown before or during the logger initialization. Fallback to console.error(). Please investigate immediately.')
         process.exit(1)
@@ -44,11 +44,11 @@ class Application {
       .then($(instance.express))
       .then($(instance.exithandler))
       .catch((e) => {
-        instance.logger.fatal(e, 'Error during start up.')
+        instance.log.fatal(e, 'Error during start up.')
         process.exit(1)
       })
       .then($(instance.listen))
-      .catch(e => instance.logger.error(e, 'Uncaught expection during application runtime'))
+      .catch(e => instance.log.error(e, 'Uncaught expection during application runtime'))
   }
 
   /**
@@ -65,7 +65,7 @@ class Application {
     }
 
     const logger = LoggerFactory.createLogger()
-    Object.defineProperty(this, 'logger', { value: logger })
+    Object.defineProperty(this, 'log', { value: logger })
   }
 
   /**
@@ -78,7 +78,7 @@ class Application {
     const args = parseArgs(process.argv.slice(2))
     if (args.config) {
       this.configPath = args.config
-      this.logger.info(`Using config file: ${this.configPath}`)
+      this.log.info(`Using config file: ${this.configPath}`)
     }
 
     if (args.port) {
@@ -93,7 +93,7 @@ class Application {
    */
   preConfig() {
     if (!fs.existsSync(this.configPath)) {
-      this.logger.fatal(`${this.configPath} doesn't exist. Creating templete ${this.configPath}.\nPlease populate it with correct values.\nSee https://developer.twitter.com/en/docs/basics/authentication/guides/access-tokens to generate your API keys`)
+      this.log.error(`${this.configPath} doesn't exist. Creating template ${this.configPath}.\n`)
 
       // default keys with example values
       fs.writeFileSync(this.configPath, JSON.stringify({
@@ -106,10 +106,11 @@ class Application {
         ]
       }, null, 2))
 
-      process.exit(1)
+      process.exit()
     }
 
     if (!fs.existsSync(this.secretPath)) {
+      this.log.fatal(`${this.secretPath} doesn't exist. Creating template ${this.secretPath}.\nPlease populate it with correct values.\nSee https://developer.twitter.com/en/docs/basics/authentication/guides/access-tokens to generate your API keys`)
       fs.writeFileSync(this.secretPath, JSON.stringify({
         "consumer_key": "",
         "consumer_secret": "",
@@ -117,7 +118,7 @@ class Application {
         "access_token_secret": ""
       }, null, 2))
 
-      process.exit(1)
+      process.exit()
     }
 
   }
@@ -133,7 +134,7 @@ class Application {
 
 
     if (!secret) {
-      this.logger.fatal("Twitter API tokens should be set in config.json")
+      this.log.fatal("Twitter API tokens should be set in config.json")
       throw new Error("Invalid config.json")
     }
 
@@ -143,7 +144,7 @@ class Application {
 
     // Let the user know what keys are missing
     if (!_.isEmpty(missingArgs)) {
-      this.logger.fatal(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
+      this.log.fatal(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
       throw new Error("Invalid config.json")
     }
 
@@ -159,7 +160,7 @@ class Application {
     const { locationKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
     this.tweets = []
 
-    const tracker = new TweetTracker(apiSecret, this.logger, (tweet) => this.tweets.push(tweet))
+    const tracker = new TweetTracker(apiSecret, this.log, (tweet) => this.tweets.push(tweet))
 
     Object.defineProperty(this, 'tracker', { value: tracker })
     tracker.init({ locationKwords, localKwords: { hazards, stocks }, boundingBoxes })
@@ -197,11 +198,11 @@ class Application {
       const { exit } = options
 
       if (err) {
-        if (this.logger) this.logger.fatal(err, 'Application crash')
+        if (this.log) this.log.fatal(err, 'Application crash')
         else console.error('FATAL: Application crash', err)
       }
-      if (this.logger) {
-        this.logger.info('Application shutdown')
+      if (this.log) {
+        this.log.info('Application shutdown')
       }
       if (exit) process.exit(0)
     }
@@ -213,8 +214,10 @@ class Application {
   listen() {
     // TODO: load port number from config.json
     module.exports = this
-    this.logger.info(`Application initialization completed. Listening on port ${this.port}`)
-    this.app.listen(this.port)
+    this.log.info(`Application initialization completed. Listening on port ${this.port}`)
+    const server = this.app.listen(this.port)
+
+    Object.defineProperty(this, 'server', { value: server })
   }
 }
 
