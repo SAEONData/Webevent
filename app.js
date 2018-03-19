@@ -164,6 +164,13 @@ class Application {
     app.get('/tweets', (req, res) => {
       res.send({ tweets: instance.tweets })
     })
+
+    app.get('/streams', (req, res) => {
+      const streams = instance.tracker.twitter.streams
+      const readableStreams = streams.map(stream => stream.reqOpts.url)
+      res.send({ streams: readableStreams })
+    })
+
     Object.defineProperty(instance, 'app', { value: app })
     return instance
   }
