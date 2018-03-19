@@ -32,7 +32,7 @@ class Application {
     const $ = (func) => func.bind(instance)
 
     return Promise.resolve(instance)
-      .then($(instance.log))
+      .then($(instance.logger))
       .catch((e) => () => {
         console.error('ERROR: An error was thrown before or during the logger initialization. Fallback to console.error(). Please investigate immediately.')
         process.exit(1)
@@ -78,7 +78,7 @@ class Application {
     const args = parseArgs(process.argv.slice(2))
     if (args.config) {
       this.configPath = args.config
-      this.log.info(`Using config file: ${this.configPath}`)
+      this.log.warn(`Using config file: ${this.configPath}`)
     }
 
     if (args.port) {
@@ -106,7 +106,6 @@ class Application {
         ]
       }, null, 2))
 
-      process.exit()
     }
 
     if (!fs.existsSync(this.secretPath)) {
@@ -129,7 +128,7 @@ class Application {
    * @ignore
    */
   config() {
-    const opts = JSON.parse(fs.readFileSync(this.configPath))
+    const config = JSON.parse(fs.readFileSync(this.configPath))
     const secret = JSON.parse(fs.readFileSync(this.secretPath))
 
 
@@ -148,7 +147,7 @@ class Application {
       throw new Error("Invalid config.json")
     }
 
-    Object.defineProperty(this, 'opts', { value: opts })
+    Object.defineProperty(this, 'config', { value: config })
     Object.defineProperty(this, 'apiSecret', { value: secret })
   }
 
@@ -156,14 +155,15 @@ class Application {
    * @description Set up the realtime tweet tracker
    */
   twitter() {
-    const { opts, apiSecret } = this
-    const { locationKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
+    const { config, apiSecret } = this
+    const { locationKwords, hooks, boundingBoxes } = config
+
     this.tweets = []
 
     const tracker = new TweetTracker(apiSecret, this.log, (tweet) => this.tweets.push(tweet))
 
     Object.defineProperty(this, 'tracker', { value: tracker })
-    tracker.init({ locationKwords, localKwords: { hazards, stocks }, boundingBoxes })
+    tracker.init({ locationKwords, hooks, boundingBoxes })
 
     tracker.start()
   }
@@ -175,7 +175,7 @@ class Application {
    */
   express() {
     const app = express()
-    const locations = this.opts.locationKwords
+    const locations = this.config.locationKwords
     app.get('/locations', (req, res) => {
       res.send({ locationKwords: locations })
     })
@@ -199,7 +199,7 @@ class Application {
 
       if (err) {
         if (this.log) this.log.fatal(err, 'Application crash')
-        else console.error('FATAL: Application crash', err)
+        else console.error('FATAL: Application crash\n', err)
       }
       if (this.log) {
         this.log.info('Application shutdown')
