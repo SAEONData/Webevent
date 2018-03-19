@@ -21,12 +21,13 @@ class TweetTracker {
     //TODO: send data to a proper endpoint
     const twitter = new Twitter(opts, { endpoint })
     Object.defineProperty(this, 'twitter', { value: twitter, enumerable: true })
+    Object.defineProperty(this, 'KEYWORD_EVENT', { value: 'TWITTER_KWORD_EVENT' })
 
   }
 
 
   init(options) {
-    const { locationKwords, boundingBoxes, localKwords: { hazards, stocks } } = options
+    const { locationKwords, boundingBoxes, hooks } = options
 
     if (locationKwords.length > 400) {
       throw new Error(`locationKwords too large (max: 400)`)
@@ -34,15 +35,16 @@ class TweetTracker {
 
     this.locationKwords = locationKwords
     this.boundingBoxes = boundingBoxes
-    this.hazards = hazards
-    this.stocks = stocks
 
     // Create an array of unique event listener keys
     const events = _.union(boundingBoxes.map(o => o.loc), locationKwords)
 
+    // Set MaxListeners to ignore all these listeners
+    this.twitter.setMaxListeners(0)
+
     // Add tweet parser
     for (let event of events) {
-      this.twitter.event(event, [(tweet) => this.tweetParser(tweet)])
+      this.twitter.event(this.KEYWORD_EVENT, [(tweet) => this.tweetParser(tweet)])
     }
 
     // TODO: Add hazard hooks
@@ -81,7 +83,7 @@ class TweetTracker {
    */
   start() {
     for (let v of this.locationKwords) {
-      this.twitter.keyword(v)
+      this.twitter.keyword(v, this.KEYWORD_EVENT)
       this.log.trace(`Tracking keyword ${v}`)
     }
 
