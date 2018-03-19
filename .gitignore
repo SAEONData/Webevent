@@ -47,3 +47,6 @@ jspm_packages
 
 # VSCode ESLint plugins
 .eslintrc.json
+
+# twitter tokens
+config/secret.json
