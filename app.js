@@ -18,7 +18,9 @@ const { TweetTracker } = require('./src/twitter')
 class Application {
   constructor() {
     this.configFile = 'config.json'
+    this.secretFile = 'secret.json'
     this.configDir = 'config'
+
   }
 
   static createApplication() {
@@ -51,7 +53,7 @@ class Application {
     const dir = 'logs'
     const errorFile = 'error.log'
 
-    if (!fs.existsSync(path.join(__dirname, dir))){
+    if (!fs.existsSync(path.join(__dirname, dir))) {
       fs.mkdirSync(path.join(__dirname, dir));
     }
 
@@ -89,6 +91,20 @@ class Application {
 
       process.exit(1)
     }
+    const secretConfigPath = path.join(__dirname, instance.configDir, instance.secretFile)
+    if (!fs.existsSync(secretConfigPath)) {
+      fs.writeFileSync(secretConfigPath, JSON.stringify({
+        "consumer_key": "",
+        "consumer_secret": "",
+        "access_token": "",
+        "access_token_secret": ""
+      }, null, 2))
+
+      process.exit(1)
+    }
+
+    Object.defineProperty(instance, 'configPath', { value: configPath })
+    Object.defineProperty(instance, 'secretPath', { value: secretConfigPath })
 
     return instance
   }
@@ -99,18 +115,18 @@ class Application {
    * @ignore
    */
   config(instance) {
-    const opts = JSON.parse(fs.readFileSync(path.join(__dirname, instance.configDir, instance.configFile)))
-    const { api } = opts
+    const opts = JSON.parse(fs.readFileSync(instance.configPath))
+    const secret = JSON.parse(fs.readFileSync(instance.secretPath))
 
 
-    if (!api) {
+    if (!secret) {
       instance.logger.fatal("Twitter API tokens should be set in config.json")
       throw new Error("Invalid config.json")
     }
 
     // Ensure all the API tokens are there
     const expectedArgs = ["consumer_key", "consumer_secret", "access_token", "access_token_secret"]
-    const missingArgs = expectedArgs.filter(e => !_.keys(api).find(a => e == a))
+    const missingArgs = expectedArgs.filter(e => !_.keys(secret).find(a => e == a))
 
     // Let the user know what keys are missing
     if (!_.isEmpty(missingArgs)) {
@@ -119,15 +135,18 @@ class Application {
     }
 
     Object.defineProperty(instance, 'opts', { value: opts })
+    Object.defineProperty(instance, 'apiSecret', { value: secret })
     return instance
   }
 
 
   twitter(instance) {
-    const { opts } = instance
-    const { api, locationKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
+    const { opts, apiSecret } = instance
+    const { locationKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
     instance.tweets = []
-    const tracker = new TweetTracker(api, instance.logger,  (tweet) => instance.tweets.push(tweet))
+
+    const tracker = new TweetTracker(apiSecret, instance.logger, (tweet) => instance.tweets.push(tweet))
+
     Object.defineProperty(instance, 'tracker', { value: tracker })
     tracker.init({ locationKwords, localKwords: { hazards, stocks }, boundingBoxes })
 
@@ -153,14 +172,14 @@ class Application {
     const handle = (options, err) => {
       const { exit } = options
 
-      if(err) {
-        if(instance.logger) instance.logger.fatal(err, 'Application crash')
+      if (err) {
+        if (instance.logger) instance.logger.fatal(err, 'Application crash')
         else console.error('FATAL: Application crash', err)
       }
-      if(instance.logger) {
+      if (instance.logger) {
         instance.logger.info('Application shutdown')
       }
-      if(exit) process.exit(0)
+      if (exit) process.exit(0)
     }
 
     //process.on('exit', handle.bind(null, { exit: true }))

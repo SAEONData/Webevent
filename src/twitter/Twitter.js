@@ -49,7 +49,7 @@ class Twitter {
     const { twit } = this
 
     // if no event name is specified to be emitted, emit the keyword as an event
-    if(!event) {
+    if (!event) {
       event = kword
     }
     const stream = twit.stream('statuses/filter', { track: kword })

@@ -199,7 +199,17 @@
       "Potholes",
       "Malaria",
       "Cholera",
-      "Flu"
+      "Flu",
+      "Extreme Temperature",
+      "Storm",
+      "Wave action",
+      "Wildfire",
+      "Chemical spill",
+      "Explosion",
+      "Gas leak",
+      "Poisoning",
+      "Radiation",
+      "Oil spill"
     ],
     "stocks": [
       "Children",
@@ -244,31 +254,24 @@
       "Bus"
     ]
   },
-  "boundingBoxes": [
-    {
+  "boundingBoxes": [{
       "bb": [
-        18.279246,
-        -34.219164,
-        18.758525,
-        -33.836752
+        18.279246, -34.219164,
+        18.758525, -33.836752
       ],
       "loc": "Cape Town"
     },
     {
       "bb": [
-        27.7886,
-        -26.4141,
-        28.2679,
-        -26.0001
+        27.7886, -26.4141,
+        28.2679, -26.0001
       ],
       "loc": "Joburg"
     },
     {
       "bb": [
-        30.667,
-        -30.0335,
-        31.1463,
-        -29.6332
+        30.667, -30.0335,
+        31.1463, -29.6332
       ],
       "loc": "Durban"
     }
