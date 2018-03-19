@@ -8,6 +8,7 @@ const fs = require('fs')
 const path = require('path')
 const _ = require('lodash')
 const express = require('express')
+const parseArgs = require('minimist')
 
 /**
  * Module imports
@@ -17,10 +18,11 @@ const { TweetTracker } = require('./src/twitter')
 
 class Application {
   constructor() {
-    this.configFile = 'config.json'
-    this.secretFile = 'secret.json'
     this.configDir = 'config'
+    this.configPath = path.join(__dirname, this.configDir, 'config.json')
+    this.secretPath = path.join(__dirname, this.configDir, 'secret.json')
 
+    this.port = 3000
   }
 
   static createApplication() {
@@ -31,6 +33,7 @@ class Application {
         console.error('ERROR: An error was thrown before or during the logger initialization. Fallback to console.error(). Please investigate immediately.')
         process.exit(1)
       })
+      .then(instance.arguments)
       .then(instance.preConfig)
       .then(instance.config)
       .then(instance.twitter)
@@ -63,17 +66,36 @@ class Application {
   }
 
   /**
+   * arguments
+   * @description Parse arguments supplied from the CLI
+   * --config <path> Path for config file
+   * --port <port> Port to listen on
+   * @param {*} instance
+   */
+  arguments(instance) {
+    const args = parseArgs(process.argv.slice(2))
+    if (args.config) {
+      instance.configPath = args.config
+      instance.logger.info(`Using config file: ${instance.configPath}`)
+    }
+
+    if (args.port) {
+      instance.port = args.port
+    }
+    return instance
+  }
+
+  /**
    * preConfig
    * Config file sanity check
    * @ignore
    */
   preConfig(instance) {
-    const configPath = path.join(__dirname, instance.configDir, instance.configFile)
-    if (!fs.existsSync(configPath)) {
-      instance.logger.fatal(`${instance.configFile} doesn't exist. Creating templete ${instance.configFile}.\nPlease populate it with correct values.\nSee https://developer.twitter.com/en/docs/basics/authentication/guides/access-tokens to generate your API keys`)
+    if (!fs.existsSync(instance.configPath)) {
+      instance.logger.fatal(`${instance.configPath} doesn't exist. Creating templete ${instance.configPath}.\nPlease populate it with correct values.\nSee https://developer.twitter.com/en/docs/basics/authentication/guides/access-tokens to generate your API keys`)
 
       // default keys with example values
-      fs.writeFileSync(configPath, JSON.stringify({
+      fs.writeFileSync(instance.configPath, JSON.stringify({
         "locationKwords": ["Cape Town", "Durban"],
         "localKwords": { "hazards": ["fire"], "stocks": ["poverty"] },
         "boundingBoxes": [
@@ -85,9 +107,9 @@ class Application {
 
       process.exit(1)
     }
-    const secretConfigPath = path.join(__dirname, instance.configDir, instance.secretFile)
-    if (!fs.existsSync(secretConfigPath)) {
-      fs.writeFileSync(secretConfigPath, JSON.stringify({
+
+    if (!fs.existsSync(instance.secretPath)) {
+      fs.writeFileSync(instance.secretPath, JSON.stringify({
         "consumer_key": "",
         "consumer_secret": "",
         "access_token": "",
@@ -97,15 +119,12 @@ class Application {
       process.exit(1)
     }
 
-    Object.defineProperty(instance, 'configPath', { value: configPath })
-    Object.defineProperty(instance, 'secretPath', { value: secretConfigPath })
-
     return instance
   }
 
   /**
    * config
-   * Load in values from the config file
+   * @description Load in values from the config file
    * @ignore
    */
   config(instance) {
@@ -133,7 +152,10 @@ class Application {
     return instance
   }
 
-
+  /**
+   * @description Set up the realtime tweet tracker
+   * @param {*} instance instance of the application
+   */
   twitter(instance) {
     const { opts, apiSecret } = instance
     const { locationKwords, localKwords: { hazards, stocks }, boundingBoxes } = opts
@@ -148,6 +170,11 @@ class Application {
     return instance
   }
 
+  /**
+   * express
+   * @description Configure the express app
+   * @param {*} instance
+   */
   express(instance) {
     const app = express()
     const locations = instance.opts.locationKwords
@@ -191,8 +218,8 @@ class Application {
   listen(instance) {
     // TODO: load port number from config.json
     module.exports = instance
-    instance.logger.info(`Application initialization completed. Listening on port ${3000}`)
-    instance.app.listen(3000)
+    instance.logger.info(`Application initialization completed. Listening on port ${instance.port}`)
+    instance.app.listen(instance.port)
   }
 }
 
