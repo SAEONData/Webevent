@@ -28,7 +28,7 @@ class Twitter {
     Object.defineProperty(this, 'twit', { value: T }) // twit
     Object.defineProperty(this, 'registry', { value: registry })
     Object.defineProperty(this, 'endpoint', { value: endpoint })
-    Object.defineProperty(this, 'streams', { value: [] })
+    Object.defineProperty(this, 'streams', { value: [], enumerable: true })
   }
 
   /**
@@ -54,6 +54,7 @@ class Twitter {
     }
     const stream = twit.stream('statuses/filter', { track: kword })
     stream.on('tweet', (tweet) => this.registry.emit(event, tweet))
+    this.streams.push(stream)
   }
 
   location(bounds, event) {

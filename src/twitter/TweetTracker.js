@@ -20,15 +20,15 @@ class TweetTracker {
 
     //TODO: send data to a proper endpoint
     const twitter = new Twitter(opts, { endpoint })
-    Object.defineProperty(this, 'twitter', { value: twitter })
+    Object.defineProperty(this, 'twitter', { value: twitter, enumerable: true })
 
   }
 
 
   init(options) {
-    const { locationKwords, boundingBoxes, localKwords: { hazards, stocks} } = options
+    const { locationKwords, boundingBoxes, localKwords: { hazards, stocks } } = options
 
-    if(locationKwords.length > 400) {
+    if (locationKwords.length > 400) {
       throw new Error(`locationKwords too large (max: 400)`)
     }
 
@@ -41,7 +41,7 @@ class TweetTracker {
     const events = _.union(boundingBoxes.map(o => o.loc), locationKwords)
 
     // Add tweet parser
-    for(let event of events) {
+    for (let event of events) {
       this.twitter.event(event, [(tweet) => this.tweetParser(tweet)])
     }
 
@@ -58,10 +58,10 @@ class TweetTracker {
    * @param {tweet} tweet
    */
   tweetParser(tweet) {
-    const {  user: { name } , text, extended_text, place, timestamp } = tweet
+    const { user: { name }, text, extended_text, place, timestamp } = tweet
     // check for location data
-    if(extended_text) text = extended_text.text
-    if(place) {
+    if (extended_text) text = extended_text.text
+    if (place) {
       const { full_name } = place
       const readableDate = new Date(timestamp)
 
@@ -80,7 +80,7 @@ class TweetTracker {
    * @description Start the tweet tracker
    */
   start() {
-    for(let v of this.locationKwords) {
+    for (let v of this.locationKwords) {
       this.twitter.keyword(v)
       this.log.trace(`Tracking keyword ${v}`)
     }
