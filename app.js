@@ -74,12 +74,6 @@ class Application {
 
       // default keys with example values
       fs.writeFileSync(configPath, JSON.stringify({
-        "api": {
-          "consumer_key": "",
-          "consumer_secret": "",
-          "access_token": "",
-          "access_token_secret": ""
-        },
         "locationKwords": ["Cape Town", "Durban"],
         "localKwords": { "hazards": ["fire"], "stocks": ["poverty"] },
         "boundingBoxes": [
