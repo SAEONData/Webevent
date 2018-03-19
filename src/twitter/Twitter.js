@@ -60,6 +60,10 @@ class Twitter {
   location(bounds, event) {
     throw new Error('Not implemented yet')
   }
+
+  setMaxListeners(number) {
+    this.registry.setMaxListeners(number)
+  }
 }
 
 module.exports = Twitter
