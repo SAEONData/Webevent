@@ -8,7 +8,8 @@ const fs = require('fs')
 const path = require('path')
 const _ = require('lodash')
 const express = require('express')
-const parseArgs = require('minimist')
+require('dotenv').config()
+
 
 /**
  * Module imports
@@ -70,19 +71,19 @@ class Application {
 
   /**
    * arguments
-   * @description Parse arguments supplied from the CLI
+   * @description Parse envioment variables
    * --config <path> Path for config file
    * --port <port> Port to listen on
    */
   arguments() {
-    const args = parseArgs(process.argv.slice(2))
-    if (args.config) {
-      this.configPath = args.config
+
+    if (process.env.CONFIG) {
+      this.configPath = process.env.CONFIG
       this.log.warn(`Using config file: ${this.configPath}`)
     }
 
-    if (args.port) {
-      this.port = args.port
+    if (process.env.PORT) {
+      this.port = process.env.PORT
     }
   }
 
