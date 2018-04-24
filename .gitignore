@@ -50,3 +50,6 @@ jspm_packages
 
 # twitter tokens
 config/secret.json
+
+old
+.env
