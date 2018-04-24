@@ -8,12 +8,17 @@ describe('Keyword', () => {
     describe('match', () => {
       it('should match a value from an array of words', () => {
         const kword = new Keyword(['one', 'two', "three"])
-        kword.match('two').should.deep.equal({ value: ['two'], match: true })
+        kword.match('two').should.deep.equal(['two'])
       })
 
       it('should fuzzy match a word in a sentence from an array of words', () => {
         const kword = new Keyword(['one', 'two', 'three'])
-        kword.match('There were two birds').should.deep.equal({ value: ['There were two birds'], match: true })
+        kword.match('There were two birds').should.deep.equal(['two'])
+      })
+
+      it('should fuzzy match multiple words in a string', () => {
+        const kword = new Keyword(['one', 'two', 'three'])
+        kword.match('There were two birds, and one dog').should.deep.equal([ 'one', 'two'])
       })
     })
 })
