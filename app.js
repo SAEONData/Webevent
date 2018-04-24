@@ -76,14 +76,17 @@ class Application {
    * --port <port> Port to listen on
    */
   arguments() {
-
-    if (process.env.CONFIG) {
-      this.configPath = process.env.CONFIG
-      this.log.warn(`Using config file: ${this.configPath}`)
+    const args = process.env
+    if(args.config) {
+        this.configPath = process.env.CONFIG
+        this.log.warn(`Using config file: ${this.configPath}`)
     }
-
-    if (process.env.PORT) {
+    if(args.port) {
       this.port = process.env.PORT
+    }
+    if(args.debug) {
+      this.log.info('Running in debug mode')
+      this.log.level("debug")
     }
   }
 
@@ -147,7 +150,7 @@ class Application {
       this.log.fatal(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
       throw new Error("Invalid config.json")
     }
-
+    
     Object.defineProperty(this, 'config', { value: config })
     Object.defineProperty(this, 'apiSecret', { value: secret })
   }
@@ -161,6 +164,7 @@ class Application {
 
     this.tweets = []
 
+    // endpoint here
     const tracker = new TweetTracker(apiSecret, this.log, (tweet) => this.tweets.push(tweet))
 
     Object.defineProperty(this, 'tracker', { value: tracker })
@@ -182,7 +186,7 @@ class Application {
     })
 
     app.get('/tweets', (req, res) => {
-      res.send({ tweets: this.tweets })
+      res.send(JSON.stringify({ tweets: this.tweets }, null, 2))
     })
 
     app.get('/streams', (req, res) => {
