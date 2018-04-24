@@ -11,23 +11,43 @@ const _ = require('lodash')
  * @ignore
  */
 const Twitter = require('./Twitter')
+const Keyword = require('../hooks/Keyword')
 
 class TweetTracker {
   constructor(opts, logger, endpoint) {
     this.opts = opts
-    Object.defineProperty(this, 'log', { value: logger })
-    Object.defineProperty(this, 'counter', { enumerable: false, writable: true })
+    Object.defineProperty(this, 'log', {
+      value: logger
+    })
+    Object.defineProperty(this, 'counter', {
+      enumerable: false,
+      writable: true
+    })
 
     //TODO: send data to a proper endpoint
-    const twitter = new Twitter(opts, { endpoint })
-    Object.defineProperty(this, 'twitter', { value: twitter, enumerable: true })
-    Object.defineProperty(this, 'KEYWORD_EVENT', { value: 'TWITTER_KWORD_EVENT' })
+    const twitter = new Twitter(opts, {
+      endpoint
+    })
+    Object.defineProperty(this, 'twitter', {
+      value: twitter,
+      enumerable: true
+    })
+    Object.defineProperty(this, 'KEYWORD_EVENT', {
+      value: 'TWITTER_KWORD_EVENT'
+    })
 
   }
 
 
   init(options) {
-    const { locationKwords, boundingBoxes, hooks } = options
+    const {
+      locationKwords,
+      boundingBoxes,
+      hooks: {
+        hazards,
+        stocks
+      }
+    } = options
 
     if (locationKwords.length > 400) {
       throw new Error(`locationKwords too large (max: 400)`)
@@ -42,15 +62,32 @@ class TweetTracker {
     // Set MaxListeners to ignore all these listeners
     this.twitter.setMaxListeners(0)
 
+    // Set up instances of matching functions for hazards and stocks
+    const hazHandler = new Keyword(hazards.keywords)
+    const stockHandler = new Keyword(stocks.keywords)
+
     // Add tweet parser
-    for (let event of events) {
-      this.twitter.event(this.KEYWORD_EVENT, [(tweet) => this.tweetParser(tweet)])
-    }
+    this.twitter.event(this.KEYWORD_EVENT, [
+      (tweet) => this.tweetParser(tweet),
 
-    // TODO: Add hazard hooks
-    // TODO: Add stock hooks
+      // hazards
+      (tweet) => {
+        const keywords = hazHandler.match(tweet.text)
+        return { ...tweet,
+          hazards: keywords
+        }
+      },
 
-    this.log.info(`Added event listeners: ${JSON.stringify(events)}`)
+      // stocks
+      (tweet) => {
+        const keywords = stockHandler.match(tweet.text)
+        return { ...tweet,
+          stocks: keywords
+        }
+      }])
+
+
+    this.log.debug(`Added event listeners: ${JSON.stringify(events)}`)
   }
 
 
@@ -60,21 +97,45 @@ class TweetTracker {
    * @param {tweet} tweet
    */
   tweetParser(tweet) {
-    const { user: { name }, text, extended_text, place, timestamp } = tweet
+    const {
+      user: {
+        name
+      },
+      text,
+      extended_text,
+      place,
+      timestamp
+    } = tweet
     // check for location data
-    if (extended_text) text = extended_text.text
+    if (extended_text) text = extended_text.full_text
     if (place) {
-      const { full_name } = place
+      const {
+        full_name
+      } = place
       const readableDate = new Date(timestamp)
 
       //return with location data
-      return { tweet: { name, timestamp, text, place: { full_name } } }
-    } else {
-
-      // return without location data (bounding box)
-      return { tweet: { name, timestamp, text } }
+      return {
+        tweet: {
+          name,
+          timestamp,
+          text,
+          place: {
+            full_name
+          }
+        }
+      }
     }
-    return tweet
+
+    // return without location data (bounding box)
+    return {
+      tweet: {
+        name,
+        timestamp,
+        text
+      }
+    }
+
   }
 
   /**

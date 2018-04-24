@@ -1,8 +1,11 @@
 'use strict'
 
+const nm = require('nanomatch')
+
 class Keyword {
   constructor(list = []) {
-    Object.defineProperty(this, 'list', { value: list })
+    const globs = list.map(word => ({ name: word, glob: `*${word.toLowerCase()}*` }) )
+    Object.defineProperty(this, 'list', { value: globs })
   }
 
   /**
@@ -12,14 +15,12 @@ class Keyword {
    * @returns {Object}
    */
   match(value) {
-    list.forEach(kword => {
-      if(value.match(kword)) {
-        return {
-          keyword: kword,
-          match: true
-        }
-      }
-    });
-    return { match: false }
+    let words = typeof value === Array ? [...value] : value
+    //const matched = nm(value, this.list)
+    const keywords = this.list.filter(word => nm(value, word.glob).length > 0).map(word => word.name)
+    return keywords
+
   }
 }
+
+module.exports = Keyword
