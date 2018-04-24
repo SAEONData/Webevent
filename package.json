@@ -7,11 +7,13 @@
     "start": "node app.js | bunyan",
     "dev": "nodemon app.js --config=config/config.dev.json | bunyan",
     "debug": "node --nolazy --inspect-brk=9229 app.js | bunyan",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha \"tests/**/*.js\""
   },
   "author": "SAEON (St John Giddy)",
   "license": "MIT",
   "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^5.1.1",
     "nodemon": "^1.17.2"
   },
   "dependencies": {
@@ -21,6 +23,7 @@
     "express": "^4.16.3",
     "graphql": "^0.13.2",
     "lodash": "^4.17.5",
+    "nanomatch": "^1.2.9",
     "twit": "^2.2.9"
   }
 }
