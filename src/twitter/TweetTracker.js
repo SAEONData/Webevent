@@ -12,9 +12,11 @@ const _ = require('lodash')
  */
 const Twitter = require('./Twitter')
 const Keyword = require('../hooks/Keyword')
+const Module = require('../Module')
 
-class TweetTracker {
+class TweetTracker extends Module {
   constructor(opts, logger, endpoint) {
+    super('twitter')
     this.opts = opts
     Object.defineProperty(this, 'log', {
       value: logger
@@ -63,7 +65,7 @@ class TweetTracker {
     this.twitter.setMaxListeners(0)
 
     // Set up instances of matching functions for hazards and stocks
-    const hazHandler = new Keyword(hazards.keywords)
+    const hazardHandler = new Keyword(hazards.keywords)
     const stockHandler = new Keyword(stocks.keywords)
 
     // Add tweet parser
@@ -72,7 +74,7 @@ class TweetTracker {
 
       // hazards
       (tweet) => {
-        const keywords = hazHandler.match(tweet.text)
+        const keywords = hazardHandler.match(tweet.text)
         return { ...tweet,
           hazards: keywords
         }
@@ -84,7 +86,17 @@ class TweetTracker {
         return { ...tweet,
           stocks: keywords
         }
-      }])
+      },
+
+      (tweet) => {
+        const fullMatch = tweet.hazards && tweet.stocks
+        const partialMatch = tweet.hazards || tweet.stocks
+        return { ...tweet,
+          fullMatch,
+          partialMatch
+        }
+      }
+    ])
 
 
     this.log.debug(`Added event listeners: ${JSON.stringify(events)}`)
@@ -104,21 +116,23 @@ class TweetTracker {
       text,
       extended_text,
       place,
-      timestamp
+      timestamp_ms
     } = tweet
-    // check for location data
+    
     if (extended_text) text = extended_text.full_text
+    // check for location data
     if (place) {
       const {
         full_name
       } = place
-      const readableDate = new Date(timestamp)
+      const readableDate = new Date(timestamp_ms)
 
       //return with location data
       return {
         tweet: {
           name,
-          timestamp,
+          timestamp_ms,
+          readableDate,
           text,
           place: {
             full_name
@@ -131,7 +145,7 @@ class TweetTracker {
     return {
       tweet: {
         name,
-        timestamp,
+        timestamp_ms,
         text
       }
     }
