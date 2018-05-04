@@ -169,7 +169,7 @@
     "Northern Cape",
     "Western Cape"
   ],
-  "localKwords": {
+  "hooks": {
     "hazards": [
       "Fire",
       "Burning",
