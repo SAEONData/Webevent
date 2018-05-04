@@ -86,24 +86,24 @@ class Application {
    * --port <port> Port to listen on
    */
   arguments() {
-    const args = process.env
-    if(args.config) {
-        this.configPath = args.CONFIG
+    const { CONFIG, PORT, DEBUG, RSS, TWITTER} = process.env
+    if(CONFIG) {
+        this.configPath = CONFIG
         this.log.warn(`Using config file: ${this.configPath}`)
     }
 
-    if(args.port) {
-      this.port = args.PORT
+    if(PORT) {
+      this.port = PORT
     }
 
-    if(args.debug) {
+    if(DEBUG) {
       this.log.info('Running in debug mode')
       this.log.level("debug")
     }
 
 
-    this.LOAD_TWITTER = args.TWITTER === undefined ? true : JSON.parse(args.TWITTER)
-    this.LOAD_RSS = args.RSS === undefined ? true : JSON.parse(args.RSS)
+    this.LOAD_TWITTER = TWITTER === undefined ? true : JSON.parse(TWITTER)
+    this.LOAD_RSS = RSS === undefined ? true : JSON.parse(RSS)
   }
 
   
