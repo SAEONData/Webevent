@@ -16,12 +16,21 @@ require('dotenv').config()
  */
 const LoggerFactory = require('./src/Logger.js')
 const { TweetTracker } = require('./src/twitter')
+const { RSSSubscriber } = require('./src/rss')
+const { ExpressModule } = require('./src/express')
+
+const Module = require('./src/Module')
+const Endpoint = require('./src/Endpoint')
 
 class Application {
   constructor() {
     this.configDir = 'config'
     this.configPath = path.join(__dirname, this.configDir, 'config.json')
     this.secretPath = path.join(__dirname, this.configDir, 'secret.json')
+    this.modules = []
+    this.status = {
+      modules: this.modules
+    }
 
     this.port = 3000
   }
@@ -42,6 +51,7 @@ class Application {
       .then($(instance.preConfig))
       .then($(instance.config))
       .then($(instance.twitter))
+      .then($(instance.rss))
       .then($(instance.express))
       .then($(instance.exithandler))
       .catch((e) => {
@@ -78,18 +88,25 @@ class Application {
   arguments() {
     const args = process.env
     if(args.config) {
-        this.configPath = process.env.CONFIG
+        this.configPath = args.CONFIG
         this.log.warn(`Using config file: ${this.configPath}`)
     }
+
     if(args.port) {
-      this.port = process.env.PORT
+      this.port = args.PORT
     }
+
     if(args.debug) {
       this.log.info('Running in debug mode')
       this.log.level("debug")
     }
+
+
+    this.LOAD_TWITTER = args.TWITTER === undefined ? true : JSON.parse(args.TWITTER)
+    this.LOAD_RSS = args.RSS === undefined ? true : JSON.parse(args.RSS)
   }
 
+  
   /**
    * preConfig
    * Config file sanity check
@@ -150,7 +167,7 @@ class Application {
       this.log.fatal(`Missing API tokens: ${JSON.stringify(missingArgs)}`)
       throw new Error("Invalid config.json")
     }
-    
+
     Object.defineProperty(this, 'config', { value: config })
     Object.defineProperty(this, 'apiSecret', { value: secret })
   }
@@ -159,18 +176,40 @@ class Application {
    * @description Set up the realtime tweet tracker
    */
   twitter() {
+
+    // twitter module is disabled
+    if(!this.LOAD_TWITTER) {
+      return
+    }
+
     const { config, apiSecret } = this
     const { locationKwords, hooks, boundingBoxes } = config
 
     this.tweets = []
 
     // endpoint here
-    const tracker = new TweetTracker(apiSecret, this.log, (tweet) => this.tweets.push(tweet))
+    const endpoint = new Endpoint('http://localhost:3030/graphql')
 
-    Object.defineProperty(this, 'tracker', { value: tracker })
+    const tracker = new TweetTracker(apiSecret, this.log, (tweet) => endpoint.post(tweet))
+
+    this.modules.push(tracker)
     tracker.init({ locationKwords, hooks, boundingBoxes })
 
     tracker.start()
+  }
+
+  /**
+   * rss
+   */
+  rss() {
+    // twitter module is disabled
+    if(!this.LOAD_RSS) {
+      return
+    }
+
+    const subscriber = new RSSSubscriber({ urls: ["http://feeds.news24.com/articles/news24/Africa/rss"], log: this.log })
+    this.modules.push(subscriber)
+    subscriber.start()
   }
 
   /**
@@ -179,23 +218,14 @@ class Application {
    * @param {*} instance
    */
   express() {
-    const app = express()
-    const locations = this.config.locationKwords
-    app.get('/locations', (req, res) => {
-      res.send({ locationKwords: locations })
-    })
 
-    app.get('/tweets', (req, res) => {
-      res.send(JSON.stringify({ tweets: this.tweets }, null, 2))
-    })
+    // register the module
+    const express = new ExpressModule()
+    this.modules.push(express)
 
-    app.get('/streams', (req, res) => {
-      const streams = this.tracker.twitter.streams
-      const readableStreams = streams.map(stream => stream.reqOpts.url)
-      res.send({ streams: readableStreams })
-    })
+    express.init(this)
 
-    Object.defineProperty(this, 'app', { value: app })
+    Object.defineProperty(this, 'express', { value: express })
   }
 
   exithandler() {
@@ -219,8 +249,16 @@ class Application {
   listen() {
     // TODO: load port number from config.json
     module.exports = this
+
+    if(this.modules.length > 0) {
+      this.log.info(`Loaded modules: ${this.modules}`)
+    } else {
+      this.log.warn(`No modules loaded, exiting`)
+      return
+    }
+
     this.log.info(`Application initialization completed. Listening on port ${this.port}`)
-    const server = this.app.listen(this.port)
+    const server = this.express.start(this.port)
 
     Object.defineProperty(this, 'server', { value: server })
   }
