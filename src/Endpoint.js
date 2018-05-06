@@ -7,7 +7,7 @@ class Endpoint {
     this.uri = api
 
     this.mutate = `
-      mutation addEvent($text: String!, $timestamp: Int!, $stocks: [String], $hazards: [String], $event_type: String, $source: String) {
+      mutation addEvent($text: String!, $timestamp: String!, $stocks: [String], $hazards: [String], $event_type: String, $source: String) {
         event(text: $text, timestamp: $timestamp, stocks: $stocks, hazards: $hazards, event_type: $event_type, source: $source) {
           key
         }
@@ -16,9 +16,12 @@ class Endpoint {
   }
 
   post(value) {
-    if(this.check(value)) {
+
+    const { timestamp } = value
+
+    //if(this.check(value)) {
       return request(this.uri, this.mutate, value).then(data => console.log(data))
-    }
+    //}
     return new Promise(() => false)
   }
 
