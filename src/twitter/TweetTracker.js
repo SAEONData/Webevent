@@ -93,7 +93,8 @@ class TweetTracker extends Module {
         const partialMatch = tweet.hazards || tweet.stocks
         return { ...tweet,
           fullMatch,
-          partialMatch
+          partialMatch,
+          event_type: "twitter"
         }
       }
     ])
@@ -113,13 +114,26 @@ class TweetTracker extends Module {
       user: {
         name
       },
-      text,
       extended_text,
       place,
-      timestamp_ms
+      timestamp_ms,
+      id_str
     } = tweet
-    
-    if (extended_text) text = extended_text.full_text
+
+    const findFullText = function(tweet) {
+        if(tweet.retweeted_status) {
+          return findFullText(tweet.retweeted_status)
+        } else if(tweet.extended_tweet) {
+          return findFullText(tweet.extended_tweet)
+        } else if(tweet.full_text) {
+          return tweet.full_text
+        } else {
+          return tweet.text
+        }
+
+    }
+
+    const text = findFullText(tweet)
     // check for location data
     if (place) {
       const {
@@ -129,28 +143,27 @@ class TweetTracker extends Module {
 
       //return with location data
       return {
-        tweet: {
           name,
-          timestamp_ms,
+          timestamp: timestamp_ms,
           readableDate,
           text,
           place: {
             full_name
-          }
+          },
+          source: `https://twitter.com/i/web/status/${id_str}`
         }
-      }
     }
 
     // return without location data (bounding box)
     return {
-      tweet: {
         name,
-        timestamp_ms,
-        text
-      }
+        timestamp: timestamp_ms,
+        text,
+        source: `https://twitter.com/i/web/status/${id_str}`
     }
 
   }
+
 
   /**
    * start
