@@ -19,9 +19,9 @@ class Endpoint {
 
     const { timestamp } = value
 
-    //if(this.check(value)) {
+    if(this.check(value)) {
       return request(this.uri, this.mutate, value).then(data => console.log(data))
-    //}
+    }
     return new Promise(() => false)
   }
 
