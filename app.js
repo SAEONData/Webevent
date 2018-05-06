@@ -18,6 +18,7 @@ const LoggerFactory = require('./src/Logger.js')
 const { TweetTracker } = require('./src/twitter')
 const { RSSSubscriber } = require('./src/rss')
 const { ExpressModule } = require('./src/express')
+const { DatabaseModule } = require('./src/database')
 
 const Module = require('./src/Module')
 const Endpoint = require('./src/Endpoint')
@@ -50,6 +51,7 @@ class Application {
       .then($(instance.arguments))
       .then($(instance.preConfig))
       .then($(instance.config))
+      .then($(instance.database))
       .then($(instance.twitter))
       .then($(instance.rss))
       .then($(instance.express))
@@ -170,6 +172,13 @@ class Application {
 
     Object.defineProperty(this, 'config', { value: config })
     Object.defineProperty(this, 'apiSecret', { value: secret })
+  }
+
+  database() {
+    const db = new DatabaseModule()
+    this.modules.push(db)
+    db.init()
+    db.start()
   }
 
   /**
