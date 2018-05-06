@@ -1,6 +1,8 @@
 'use strict'
 
 const express = require('express')
+const { request } = require('graphql-request')
+
 const Module = require('../Module')
 
 /**
@@ -33,6 +35,24 @@ class ExpressModule extends Module {
 
     app.get('/', (req, res) => {
       res.send(`<html><body>Webevent running. Go to <a href="/status">/status</a> for more information</body></html>`)
+    })
+
+    app.get('/events', async (req, res) => {
+      const query = `
+      query {
+        events {
+          key
+          timestamp
+          text
+          stocks
+          hazards
+          source
+          event_type
+        }
+      }
+      `
+      const json = await request('http://localhost:3030/graphql', query)
+      res.json(json)
     })
   }
 
