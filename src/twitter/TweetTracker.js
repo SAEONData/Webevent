@@ -67,6 +67,7 @@ class TweetTracker extends Module {
     // Set up instances of matching functions for hazards and stocks
     const hazardHandler = new Keyword(hazards.keywords)
     const stockHandler = new Keyword(stocks.keywords)
+    const locationHandler = new Keyword(locationKwords)
 
     // Add tweet parser
     this.twitter.event(this.KEYWORD_EVENT, [
@@ -85,6 +86,14 @@ class TweetTracker extends Module {
         const keywords = stockHandler.match(tweet.text)
         return { ...tweet,
           stocks: keywords
+        }
+      },
+
+      // stocks
+      (tweet) => {
+        const keywords = locationHandler.match(tweet.text)
+        return { ...tweet,
+          locality: keywords
         }
       },
 
