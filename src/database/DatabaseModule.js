@@ -16,7 +16,7 @@ const level = require('level')
 const Module = require('../Module')
 
 class DatabaseModule extends Module {
-  constructor({ path, port, log } = { path: "./data", port: 3030 }) {
+  constructor({ path, port, log } = { path: "./mock_data", port: 3030 }) {
     super('graphql-database')
     this.db = level(path)
     this.port = port
@@ -33,7 +33,7 @@ class DatabaseModule extends Module {
       }
 
       type Mutation {
-        event(text: String!, event_type: String, timestamp: String!, hazards: [String], stocks: [String], source: String): DatabaseEntry
+        event(text: String, event_type: String, timestamp: String!, hazards: [String], stocks: [String], source: String, locality: String): DatabaseEntry
       }
 
       type DatabaseEntry implements Event {
@@ -44,15 +44,16 @@ class DatabaseModule extends Module {
         timestamp: String!
         event_type: String!
         source: String
+        locality: String
       }
 
       interface Event {
-        text: String
         hazards: [String]
         stocks: [String]
         timestamp: String!
         event_type: String!
         source: String
+        locality: String
       }
     `
 
@@ -74,7 +75,9 @@ class DatabaseModule extends Module {
       },
       Mutation: {
         event: async (root, args) => {
-          await this.db.put(this.autoID++, JSON.stringify({
+          let key = this.autoID
+          this.autoID++
+          await this.db.put(key, JSON.stringify({
             timestamp: args.timestamp,
             text: args.text,
             hazards: args.hazards,
@@ -82,11 +85,11 @@ class DatabaseModule extends Module {
             event_type: args.event_type,
             source: args.source
           }))
-          await this.db.put('_autoID', this.autoID)
+          await this.db.put('_autoID', key)
 
-          const stored = await this.db.get(this.autoID - 1).then(JSON.parse)
+          const stored = await this.db.get(key).then(JSON.parse)
           return { ...stored,
-            key: this.autoID - 1
+            key
           }
         }
       }
@@ -108,7 +111,7 @@ class DatabaseModule extends Module {
       db.createReadStream()
         .on('data', (data) => {
           if (data.key !== '_autoID') {
-            console.log(data)
+            //console.log(data)
           }
         })
     }
