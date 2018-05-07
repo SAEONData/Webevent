@@ -2,7 +2,6 @@
 
 const express = require('express')
 const { request } = require('graphql-request')
-const d3 = require('d3')
 const fs = require('fs')
 const path = require('path')
 
