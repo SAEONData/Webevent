@@ -43,7 +43,6 @@ class ExpressModule extends Module {
         events {
           key
           timestamp
-          text
           stocks
           hazards
           source
