@@ -83,6 +83,7 @@ class DatabaseModule extends Module {
             hazards: args.hazards,
             stocks: args.stocks,
             event_type: args.event_type,
+            locality: args.locality,
             source: args.source
           }))
           await this.db.put('_autoID', key)
