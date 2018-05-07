@@ -47,6 +47,7 @@ class ExpressModule extends Module {
           hazards
           source
           event_type
+          locality
         }
       }
       `
