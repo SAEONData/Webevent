@@ -2,6 +2,9 @@
 
 const express = require('express')
 const { request } = require('graphql-request')
+const d3 = require('d3')
+const fs = require('fs')
+const path = require('path')
 
 const Module = require('../Module')
 
@@ -26,6 +29,7 @@ class ExpressModule extends Module {
     //   const readableStreams = streams.map(stream => stream.reqOpts.url)
     //   res.send({ streams: readableStreams })
     // })
+    this.file = fs.readFileSync(path.join(__dirname,'./www/index.html'))
 
     app.get('/status', (req, res) => {
       res.send({
@@ -51,8 +55,14 @@ class ExpressModule extends Module {
         }
       }
       `
+
       const json = await request('http://localhost:3030/graphql', query)
       res.json(json)
+    })
+
+    app.get('/chart', async (req, res) => {
+      this.file = fs.readFileSync(path.join(__dirname,'./www/index.html'))
+      res.status(200).set('content-type', 'text/html').send(this.file)
     })
   }
 

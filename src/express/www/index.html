@@ -1,0 +1,73 @@
+<html>
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+<script>
+  const url = 'http://' + document.location.host + '/events'
+  const fetchOpts = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }
+  async function getEvents() {
+    let res = await fetch(url, fetchOpts)
+    let json = await res.json()
+    console.log(res)
+    return json.events.map(v => ({
+        ...v,
+        timestamp: v.timestamp - (v.timestamp % 3.6e6)
+      }))
+      .sort((a, b) => {
+        return a.timestamp - b.timestamp
+      })
+      .reduce((prev, next) => {
+        console.log(`${prev}, ${next.timestamp}`)
+        let date = new Date(next.timestamp)
+        if(!prev[date]) {
+          prev[date] = { count: 1, date }
+          return prev
+        } else {
+          prev[date].count += 1
+          return prev
+        }
+      }, {})
+  }
+
+  google.charts.load('current', {
+    packages: ['corechart', 'line']
+  });
+  google.charts.setOnLoadCallback(drawBasic);
+
+
+
+  async function drawBasic() {
+    var data = new google.visualization.DataTable();
+    data.addColumn('date', 'Hour');
+    data.addColumn('number', 'Events');
+    const d = await getEvents()
+    console.log(Object.entries(d))
+    data.addRows(Object.entries(d).map(v => ([v[1].date, v[1].count])))
+    var options = {
+      hAxis: {
+        title: 'Time'
+      },
+      vAxis: {
+        title: 'Events'
+      }
+    };
+
+    var chart = new google.visualization.LineChart(document.getElementById('chart'));
+
+    chart.draw(data, options);
+  }
+</script>
+  <body>
+    <div id = "chart" > </svg> <script>
+    google.charts.load('current', {
+      packages: ['corechart', 'line']
+    });
+  google.charts.setOnLoadCallback(chart)
+</script>
+
+<body>
+
+</html>
